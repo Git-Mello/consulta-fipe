@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: consulta-fipe
+  config:
+    # Lê o .env da pasta de execução, se existir (variáveis de ambiente reais têm prioridade)
+    import: "optional:file:.env[.properties]"
+  mvc:
+    # Erros padrão do Spring (400, 404, 405...) também saem como ProblemDetail (RFC 9457)
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-stacktrace: never
+    include-message: never
+    whitelabel:
+      enabled: false
+
+# Integração com a API da FIPE (lido por br.com.consultafipe.config.FipeProperties)
+fipe:
+  base-url: ${FIPE_API_BASE_URL:https://fipe.api.br/api/v2}
+  # Opcional: sem token a API libera 500 requisições/dia; com token gratuito, 1.000.
+  token: ${FIPE_API_TOKEN:}
+  timeouts:
+    conexao: ${FIPE_CONNECT_TIMEOUT:3s}
+    leitura: ${FIPE_READ_TIMEOUT:5s}
+  tentativas:
+    # Novas tentativas só em falhas temporárias (timeout, 502, 503, 504); nunca em 4xx/429
+    maximo: ${FIPE_MAX_TENTATIVAS:2}
+    espera-inicial: ${FIPE_ESPERA_INICIAL:300ms}
+  cache:
+    # Marcas, modelos e anos só mudam com a tabela mensal
+    catalogo-ttl: ${FIPE_CACHE_CATALOGO_TTL:24h}
+    preco-ttl: ${FIPE_CACHE_PRECO_TTL:6h}
+    tamanho-maximo: ${FIPE_CACHE_TAMANHO_MAXIMO:10000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
