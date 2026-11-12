@@ -20,7 +20,7 @@ class ConsultaFipeApplicationTests {
     void deveSubirComAsConfiguracoesPadrao() {
         assertThat(propriedades.baseUrl()).isEqualTo(URI.create("https://fipe.api.br/api/v2"));
         assertThat(propriedades.possuiToken()).isFalse();
-        assertThat(propriedades.timeouts().conexao()).isEqualTo(Duration.ofSeconds(3));
+        assertThat(propriedades.timeouts().conexao()).isEqualTo(Duration.ofSeconds(5));
         assertThat(propriedades.timeouts().leitura()).isEqualTo(Duration.ofSeconds(5));
         assertThat(propriedades.cache().catalogoTtl()).isEqualTo(Duration.ofHours(24));
         assertThat(propriedades.cache().precoTtl()).isEqualTo(Duration.ofHours(6));

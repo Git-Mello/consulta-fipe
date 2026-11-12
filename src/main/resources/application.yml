@@ -22,7 +22,8 @@ fipe:
   # Opcional: sem token a API libera 500 requisições/dia; com token gratuito, 1.000.
   token: ${FIPE_API_TOKEN:}
   timeouts:
-    conexao: ${FIPE_CONNECT_TIMEOUT:3s}
+    # Inclui o handshake TLS: medido em ~3,1s em conexões "frias" com a FIPE (12/11/2026), por isso 5s
+    conexao: ${FIPE_CONNECT_TIMEOUT:5s}
     leitura: ${FIPE_READ_TIMEOUT:5s}
   tentativas:
     # Novas tentativas só em falhas temporárias (timeout, 502, 503, 504); nunca em 4xx/429
