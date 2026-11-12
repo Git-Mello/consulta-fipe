@@ -1,16 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="|${titulo ?: 'Erro'} · Consulta FIPE|">Erro · Consulta FIPE</title>
+<!-- Renderizada pelo GlobalExceptionHandler (titulo, mensagem, status) e, como reserva,
+     pelo /error do Spring Boot, que não envia titulo nem mensagem: por isso os valores padrão. -->
+<head th:replace="~{fragments/layout :: head(|${titulo ?: 'Erro'} · Consulta FIPE|)}">
+    <title>Erro · Consulta FIPE</title>
 </head>
 <body>
-<main class="erro">
-    <p class="erro__status" th:if="${status}" th:text="${status}">500</p>
-    <h1 th:text="${titulo ?: 'Algo deu errado'}">Algo deu errado</h1>
-    <p th:text="${mensagem ?: 'Ocorreu um erro inesperado. Tente novamente.'}">Ocorreu um erro inesperado.</p>
-    <a th:href="@{/}">Voltar para a consulta</a>
+<header th:replace="~{fragments/layout :: cabecalho}"></header>
+
+<main class="conteudo conteudo--centro">
+    <section class="painel erro" role="alert">
+        <p class="erro__status" th:if="${status}" th:text="${status}">500</p>
+        <h1 class="erro__titulo" th:text="${titulo ?: 'Algo deu errado'}">Algo deu errado</h1>
+        <p class="erro__mensagem" th:text="${mensagem ?: 'Ocorreu um erro inesperado. Tente novamente.'}">
+            Ocorreu um erro inesperado. Tente novamente.
+        </p>
+        <a class="botao" th:href="@{/}">Voltar para a consulta</a>
+    </section>
 </main>
+
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
 </body>
 </html>

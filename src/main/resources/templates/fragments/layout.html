@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+
+<!-- Partes comuns às páginas. Uso: th:replace="~{fragments/layout :: head('Título')}" -->
+<head th:fragment="head(titulo)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Consulte o preço médio de carros, motos e caminhões na Tabela FIPE.">
+    <meta name="color-scheme" content="light dark">
+    <title th:text="${titulo}">Consulta FIPE</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+
+<body>
+
+<header th:fragment="cabecalho" class="cabecalho">
+    <div class="cabecalho__conteudo">
+        <a class="cabecalho__marca" th:href="@{/}">
+            <span class="cabecalho__logo" aria-hidden="true">F</span>
+            Consulta FIPE
+        </a>
+        <p class="cabecalho__descricao">Preço médio de veículos na Tabela FIPE</p>
+    </div>
+</header>
+
+<footer th:fragment="rodape" class="rodape">
+    <p>
+        Valores da Tabela FIPE, consultados em
+        <a href="https://fipe.api.br" rel="noopener noreferrer" target="_blank">fipe.api.br</a>.
+        São preços médios de referência, não o valor de venda de um veículo específico.
+    </p>
+</footer>
+
+</body>
+</html>

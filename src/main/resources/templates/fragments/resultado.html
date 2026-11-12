@@ -3,8 +3,11 @@
 <body>
 
 <!-- Card com o preço FIPE: devolvido por GET /consulta/{tipo}/{marcaId}/{modeloId}/{anoId} -->
-<section th:fragment="card" class="resultado" aria-labelledby="resultado-titulo">
-    <p id="resultado-titulo" class="resultado__rotulo">Preço FIPE</p>
+<article th:fragment="card" class="resultado" aria-labelledby="resultado-titulo">
+    <header class="resultado__cabecalho">
+        <p id="resultado-titulo" class="resultado__rotulo">Preço FIPE</p>
+        <p class="resultado__tipo" th:text="${preco.tipo().rotulo()}">Carros</p>
+    </header>
     <p class="resultado__preco" th:text="${preco.valor()}">R$ 0,00</p>
     <dl class="resultado__detalhes">
         <div>
@@ -21,20 +24,20 @@
         </div>
         <div>
             <dt>Código FIPE</dt>
-            <dd th:text="${preco.codigoFipe()}">000000-0</dd>
+            <dd class="resultado__codigo" th:text="${preco.codigoFipe()}">000000-0</dd>
         </div>
         <div>
             <dt>Mês de referência</dt>
             <dd th:text="${preco.mesReferencia()}">mês de ano</dd>
         </div>
     </dl>
-</section>
+</article>
 
 <!-- Erro da consulta: inserido pelo JavaScript no lugar do card -->
-<section th:fragment="erro" class="resultado resultado--erro" role="alert">
+<div th:fragment="erro" class="resultado resultado--erro" role="alert">
     <p class="resultado__titulo" th:text="${titulo}">Erro</p>
     <p class="resultado__mensagem" th:text="${mensagem}">Não foi possível concluir a consulta.</p>
-</section>
+</div>
 
 </body>
 </html>
