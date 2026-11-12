@@ -4,10 +4,9 @@ spring:
   config:
     # Lê o .env da pasta de execução, se existir (variáveis de ambiente reais têm prioridade)
     import: "optional:file:.env[.properties]"
-  mvc:
-    # Erros padrão do Spring (400, 404, 405...) também saem como ProblemDetail (RFC 9457)
-    problemdetails:
-      enabled: true
+  # spring.mvc.problemdetails fica desligado de propósito: o GlobalExceptionHandler já responde
+  # ProblemDetail (RFC 9457) nas rotas /api, inclusive para erros do Spring (400, 404, 405...),
+  # e o advice do Boot interceptaria esses erros também nas rotas de página.
 
 server:
   port: ${SERVER_PORT:8080}

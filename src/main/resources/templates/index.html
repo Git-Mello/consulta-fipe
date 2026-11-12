@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Consulta FIPE</title>
+</head>
+<body>
+<main>
+    <h1>Consulta FIPE</h1>
+    <label for="tipo">Tipo de veículo</label>
+    <select id="tipo" name="tipo">
+        <option value="" selected disabled>Selecione o tipo</option>
+        <option th:each="tipo : ${tipos}" th:value="${tipo.slug()}" th:text="${tipo.rotulo()}">Carros</option>
+    </select>
+</main>
+</body>
+</html>
