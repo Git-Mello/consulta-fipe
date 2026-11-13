@@ -21,6 +21,10 @@ logs/
 ### Spring ###
 HELP.md
 
+### Arquivos locais de trabalho (prompts e configurações pessoais do Claude Code) ###
+PROMPT*.md
+.claude/settings.local.json
+
 ### STS / Eclipse ###
 .apt_generated
 .classpath
