@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Consulta à Tabela FIPE: Java 25 + Spring Boot 4.1 (Spring MVC + Thymeleaf), padrão **MVC**. Visão completa no [README.md](README.md).
+Consulta à Tabela FIPE: Java 25 + Spring Boot 4.1 (Spring MVC + Thymeleaf), padrão **MVC**. Stack e estrutura de pastas no [README.md](README.md).
 
 ## Comandos
 
@@ -11,8 +11,9 @@ Consulta à Tabela FIPE: Java 25 + Spring Boot 4.1 (Spring MVC + Thymeleaf), pad
 ./mvnw clean package                         # jar em target/
 ```
 
-- O projeto exige **JDK 25**. Se `java -version` mostrar outra versão (ex.: num terminal aberto antes da instalação), aponte o `JAVA_HOME` para `C:\Program Files\Eclipse Adoptium\jdk-25.0.5.8-hotspot` antes de rodar o `mvnw`.
+- O projeto exige **JDK 25**. Se `java -version` mostrar outra versão, aponte o `JAVA_HOME` para `C:\Program Files\Eclipse Adoptium\jdk-25.0.5.8-hotspot` antes de rodar o `mvnw`.
 - No Windows, parar o `spring-boot:run` pode deixar o processo `java` filho vivo, segurando a porta 8080. Confira com `Get-NetTCPConnection -LocalPort 8080` e encerre só o processo da `ConsultaFipeApplication`.
+- O `spring-boot:run` serve os estáticos de `target/classes`: depois de mudar CSS ou JS, reinicie a aplicação (ou copie o arquivo para lá).
 - `./mvnw test` precisa passar com **0 testes ignorados** antes de qualquer commit.
 
 ## Arquitetura e regras entre camadas
@@ -22,7 +23,7 @@ Fluxo obrigatório: `View ⇄ Controller → Service → Client`. Cada camada s�
 | Pacote | Papel | Pode depender de | Nunca |
 |---|---|---|---|
 | `model/client` | `FipeClient` + `dto/`: **único** lugar que conhece rotas, headers, JSON e status da FIPE | `config`, `exception` | Ser chamado por controller; expor DTO para fora do Model |
-| `model/service` | `FipeService` (orquestração, ordenação, `@Cacheable`) + `ConversorFipe` (DTO → domínio, regra do ano `32000` = Zero km) | `client`, `domain`, `exception` | Conhecer HTTP, request, templates |
+| `model/service` | `FipeService` (orquestração, ordenação, `@Cacheable`) + `ConversorFipe` (DTO → domínio) | `client`, `domain`, `exception` | Conhecer HTTP, request, templates |
 | `model/domain` | `TipoVeiculo`, `Marca`, `Modelo`, `AnoModelo`, `PrecoFipe`: records/enum imutáveis e validados no construtor | nada do projeto | Depender de Spring ou de DTO |
 | `controller` | `PaginaController` (`@Controller`: `index` e fragmento `resultado :: card`) e `CatalogoController` (`@RestController` sob `/api`): só validam e delegam | `service`, `domain` | Regra de negócio, chamar o client |
 | `exception` | Exceções próprias + `GlobalExceptionHandler` (único `@ControllerAdvice`) + `MapeadorDeErros` | `domain` | Expor mensagem técnica ou stack trace ao usuário |
@@ -30,6 +31,7 @@ Fluxo obrigatório: `View ⇄ Controller → Service → Client`. Cada camada s�
 | View | `templates/` (Thymeleaf) e `static/` (`styles.css`, `consulta.js`) | atributos do modelo e rotas `/api` e `/consulta` | Regra de negócio; chamar a API da FIPE; receber DTO externo |
 
 - Uma mudança no formato da API da FIPE deve afetar só `model/client` e, no máximo, o `ConversorFipe`. A exceção é `TipoVeiculo.codigoApi()` (`cars`, `motorcycles`, `trucks`), pedida pela especificação.
+- Regras de dados ficam no `ConversorFipe`, nunca no JS. O ano `32000` vira "Zero km". A descrição do ano é só o ano ("2018"); o combustível só aparece quando o mesmo ano se repete na lista do modelo ("2005 Gasolina" / "2005 Álcool"). O código do ano (`2018-5`) não muda.
 - Erros: o client traduz cada status em uma `FipeException` (`RecursoNaoEncontrado`, `RequisicaoInvalida`, `FalhaAutenticacao`, `LimiteDeUsoExcedido`, `ServicoExternoIndisponivel`). O `GlobalExceptionHandler` responde no formato da rota: `/api/**` → `ProblemDetail`; `/consulta/**` → `fragments/resultado :: erro`; o resto → `error.html`. Para mudar status ou mensagens, mexa no `MapeadorDeErros`.
 - Cache só no service (`@Cacheable(sync = true)`). Os nomes ficam em `FipeService.CACHE_*`, e o `CacheConfig` só aceita esses nomes: um cache novo precisa ser registrado lá.
 
@@ -37,13 +39,25 @@ Fluxo obrigatório: `View ⇄ Controller → Service → Client`. Cada camada s�
 
 - **Código e testes em português** (classes, métodos, variáveis, mensagens). Termos técnicos consagrados em inglês continuam como estão (`Controller`, `Service`, `DTO`).
 - Injeção **só por construtor**, com campos `private final`. Imutabilidade por padrão (`record`, `List.copyOf`, `toList()`).
-- Configuração nova: um campo em `FipeProperties` (validado), um placeholder com valor padrão no `application.yml` e uma linha no `.env.example` e na tabela do README.
+- Configuração nova: um campo em `FipeProperties` (validado), um placeholder com valor padrão no `application.yml` e uma linha comentada no `.env.example`.
 - Validação de `@PathVariable`: anotações compostas (`@CodigoNumerico`, `@CodigoAno`) com a **validação de método nativa do Spring 7**. **Não** use `@Validated` na classe: ele troca a `HandlerMethodValidationException` (que traz o nome do campo) por `ConstraintViolationException`.
 - `spring.mvc.problemdetails` fica **desligado** de propósito, e o `GlobalExceptionHandler` tem `@Order(HIGHEST_PRECEDENCE)`. O advice do Boot capturava os erros do Spring e respondia JSON até nas rotas de página.
 - Logs com SLF4J e placeholders, sempre com método, rota e status. **Nunca** logar o token. O `FipeProperties.toString()` já o mascara.
 - Thymeleaf: só `th:text`, nunca `th:utext`. Acesse records com chamada de método: `${preco.valor()}`.
-- JavaScript (`consulta.js`, sem build): três seções (HTTP / Tela / Fluxo), textos via `textContent` ou `new Option`. O **único** `innerHTML` insere o fragmento vindo do nosso servidor. O `SegurancaDaViewTest` quebra se isso mudar.
-- Commits em Conventional Commits, em português (`feat(fipe): ...`), um por etapa lógica. O `PROMPT.md` **não** é versionado.
+- JavaScript (`consulta.js`, sem build e sem biblioteca): três seções (HTTP / Tela / Fluxo), textos via `textContent` ou `new Option`. O **único** `innerHTML` insere o fragmento vindo do nosso servidor. O `SegurancaDaViewTest` quebra se isso mudar.
+- Etapas da tela: tipo e ano são `<select>`; marca e modelo são um combobox com lista (WAI-ARIA APG, `criarCombobox`), porque as listas são longas. Os dois controles têm a mesma interface (`valor`, `mostrar`, `habilitar`, `aoMudar`): o fluxo (`aoEscolher`, `atualizarLuzes`, `limparDepoisDe`) não pode ter `if` por tipo de campo.
+- Commits em Conventional Commits, em português (`feat(fipe): ...`), um por etapa lógica, **sem** linha de coautoria. Prompts de trabalho (`PROMPT*.md`) não são versionados.
+
+## Design
+
+Direção visual **"Hodômetro"** (painel de instrumentos). O cabeçalho do `styles.css` é a referência; ao mexer na tela, mantenha:
+
+- **Tokens só em `:root`** (cor, fonte, espaço, raio, movimento); o resto do CSS usa apenas `var(--...)`. O tema escuro redefine os mesmos tokens em `prefers-color-scheme: dark`. Cores novas precisam de contraste WCAG AA (o valor fica comentado ao lado do token).
+- **O preço tem lugar fixo no topo** e existe desde o início (tambores apagados `000.000,00`): a tela nunca começa vazia. Na consulta, cada tambor gira e para no dígito.
+- **Luzes-espia em vez de enfeite:** a luz de cada etapa (`data-estado` = `bloqueada`, `atual`, `feita`) mostra o estado; âmbar para falha temporária (503), vermelho para erro.
+- **Laranja (`--cor-ponteiro`) só para o que está acontecendo agora:** etapa atual, foco, item ativo da lista, centavos.
+- **Superfícies planas:** sem sombra; raio pequeno só em campos e tambores.
+- Fontes **Barlow** e **Barlow Semi Condensed**, servidas pelo projeto em `static/fonts/` (o `OFL.txt` é a licença e acompanha os `.woff2`). Mobile first; alvo de toque de `--alvo-toque` (44px); `prefers-reduced-motion` desliga os giros.
 
 ## Testes
 
@@ -52,8 +66,12 @@ Fluxo obrigatório: `View ⇄ Controller → Service → Client`. Cada camada s�
   - service: Mockito;
   - cache: contexto mínimo do Spring;
   - controllers: `@WebMvcTest` com `@MockitoBean`;
-  - view: `TemplatesTest`.
+  - view: `TemplatesTest` e `SegurancaDaViewTest`.
 - Nomes: `<Classe>Test`, métodos `deve...` em português, corpo em preparação / execução / verificação, asserções com AssertJ.
-- **Nenhum teste acessa a internet.** As respostas da FIPE são fixtures reais em `src/test/resources/fixtures/` (ver o `LEIA-ME.md` de lá). Use-as em vez de escrever JSON de cabeça.
+- **Nenhum teste acessa a internet.** Use as fixtures de `src/test/resources/fixtures/` em vez de escrever JSON de cabeça:
+  - são respostas **reais** da API, coletadas com `curl` em 12/11/2026, no exemplo Fiat ARGO DRIVE 1.0 6V Flex 2018 (marca `21`, modelo `7965`, ano `2018-5`); `erro-401.json` veio de um token inválido;
+  - `erro-429-sintetico.json` é **sintético** (provocar um 429 real gastaria a cota), no formato `{"error": "..."}` dos outros erros;
+  - os preços mudam todo mês: atualize os arquivos só se o formato da API mudar.
 - Objetos de domínio de exemplo ficam em `fixture/DominioFixtures`.
 - No MockMvc, `get("/x/%20")` codifica o `%` de novo. Para mandar a URL como está, use `get(URI.create(url))`.
+- A única dependência de teste é o `spring-boot-starter-webmvc-test` (traz JUnit, Mockito, AssertJ, MockMvc e `MockRestServiceServer`).

@@ -1,6 +1,6 @@
 # Consulta FIPE
 
-Aplicação web para consultar o preço de veículos pela **Tabela FIPE**. O usuário escolhe tipo de veículo → marca → modelo → ano e vê o preço FIPE com os detalhes do veículo, sem recarregar a página.
+Aplicação web para consultar o preço de veículos pela **Tabela FIPE**. O usuário escolhe tipo de veículo → marca → modelo → ano e vê o preço FIPE com os detalhes do veículo, sem recarregar a página. Marca e modelo são caixas de busca: basta digitar parte do nome (ex.: "argo 1.0") e escolher na lista. O ano aparece só como ano ("2018", "Zero km"), e o combustível fica no resultado.
 
 Os dados vêm da API pública da FIPE ([fipe.api.br](https://fipe.api.br/docs/api)). O navegador **nunca** chama essa API direto: todas as consultas passam pela aplicação, e o token (quando houver) fica só no servidor.
 
@@ -35,7 +35,7 @@ src/main/java/br/com/consultafipe/
 src/main/resources/
 ├── application.yml
 ├── templates/       index.html, error.html, fragments/layout.html, fragments/resultado.html
-└── static/          css/styles.css, js/consulta.js, favicon.svg
+└── static/          css/styles.css, js/consulta.js, fonts/ (Barlow, licença OFL), favicon.svg
 ```
 
 ## Pré-requisitos
