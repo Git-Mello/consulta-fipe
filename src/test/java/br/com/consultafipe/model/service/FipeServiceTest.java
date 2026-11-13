@@ -107,18 +107,51 @@ class FipeServiceTest {
     class Anos {
 
         @Test
-        void deveTraduzirZeroKmEOrdenarDoMaisNovoParaOMaisAntigo() {
+        void deveMostrarSoOAnoEOrdenarDoMaisNovoParaOMaisAntigo() {
             when(client.listarAnos("cars", "21", "7965")).thenReturn(itens(
-                    "2018-5", "2018 Flex", "2019-1", "2019 Gasolina",
-                    "32000-5", "32000 Flex", "2019-5", "2019 Flex"));
+                    "2018-5", "2018 Flex", "2020-5", "2020 Flex", "2019-5", "2019 Flex"));
 
             List<AnoModelo> anos = service.listarAnos(TipoVeiculo.CARROS, "21", "7965");
 
             assertThat(anos).containsExactly(
-                    new AnoModelo("32000-5", "Zero km Flex"),
-                    new AnoModelo("2019-5", "2019 Flex"),
-                    new AnoModelo("2019-1", "2019 Gasolina"),
-                    new AnoModelo("2018-5", "2018 Flex"));
+                    new AnoModelo("2020-5", "2020"),
+                    new AnoModelo("2019-5", "2019"),
+                    new AnoModelo("2018-5", "2018"));
+        }
+
+        @Test
+        void deveMostrarZeroKmNoLugarDoAno32000EColocarPrimeiro() {
+            when(client.listarAnos("cars", "21", "7965")).thenReturn(itens(
+                    "2025-5", "2025 Flex", "32000-5", "32000 Flex"));
+
+            List<AnoModelo> anos = service.listarAnos(TipoVeiculo.CARROS, "21", "7965");
+
+            assertThat(anos).containsExactly(
+                    new AnoModelo("32000-5", "Zero km"),
+                    new AnoModelo("2025-5", "2025"));
+        }
+
+        @Test
+        void deveManterOCombustivelSoNosAnosQueSeRepetem() {
+            when(client.listarAnos("cars", "21", "7965")).thenReturn(itens(
+                    "2005-2", "2005 Álcool", "2006-1", "2006 Gasolina", "2005-1", "2005 Gasolina"));
+
+            List<AnoModelo> anos = service.listarAnos(TipoVeiculo.CARROS, "21", "7965");
+
+            assertThat(anos).extracting(AnoModelo::descricao)
+                    .containsExactlyInAnyOrder("2006", "2005 Gasolina", "2005 Álcool");
+            assertThat(anos.getFirst()).isEqualTo(new AnoModelo("2006-1", "2006"));
+        }
+
+        @Test
+        void deveManterOCombustivelNoZeroKmQuandoEleSeRepete() {
+            when(client.listarAnos("cars", "21", "7965")).thenReturn(itens(
+                    "32000-1", "32000 Gasolina", "32000-5", "32000 Flex", "2024-5", "2024 Flex"));
+
+            List<AnoModelo> anos = service.listarAnos(TipoVeiculo.CARROS, "21", "7965");
+
+            assertThat(anos).extracting(AnoModelo::descricao)
+                    .containsExactly("Zero km Flex", "Zero km Gasolina", "2024");
         }
 
         @Test
@@ -129,9 +162,9 @@ class FipeServiceTest {
             List<AnoModelo> anos = service.listarAnos(TipoVeiculo.CARROS, "21", "7965");
 
             assertThat(anos).hasSize(10);
-            assertThat(anos.getFirst()).isEqualTo(new AnoModelo("32000-5", "Zero km Flex"));
-            assertThat(anos.get(1)).isEqualTo(new AnoModelo("2026-5", "2026 Flex"));
-            assertThat(anos.getLast()).isEqualTo(new AnoModelo("2018-5", "2018 Flex"));
+            assertThat(anos.getFirst()).isEqualTo(new AnoModelo("32000-5", "Zero km"));
+            assertThat(anos.get(1)).isEqualTo(new AnoModelo("2026-5", "2026"));
+            assertThat(anos.getLast()).isEqualTo(new AnoModelo("2018-5", "2018"));
         }
 
         @Test

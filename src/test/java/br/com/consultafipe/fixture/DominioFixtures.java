@@ -22,7 +22,7 @@ public final class DominioFixtures {
     }
 
     public static List<AnoModelo> anos() {
-        return List.of(new AnoModelo("32000-5", "Zero km Flex"), new AnoModelo("2018-5", "2018 Flex"));
+        return List.of(new AnoModelo("32000-5", "Zero km"), new AnoModelo("2018-5", "2018"));
     }
 
     public static PrecoFipe precoArgo2018() {

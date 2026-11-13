@@ -77,7 +77,7 @@ class CatalogoControllerTest {
             mvc.perform(get("/api/motos/marcas/80/modelos/123/anos"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].codigo").value("32000-5"))
-                    .andExpect(jsonPath("$[0].descricao").value("Zero km Flex"));
+                    .andExpect(jsonPath("$[0].descricao").value("Zero km"));
         }
     }
 

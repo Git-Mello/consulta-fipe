@@ -9,7 +9,8 @@ import br.com.consultafipe.model.domain.Modelo;
 import br.com.consultafipe.model.domain.PrecoFipe;
 import br.com.consultafipe.model.domain.TipoVeiculo;
 import java.util.List;
-import java.util.function.Function;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,15 +30,29 @@ final class ConversorFipe {
     }
 
     static List<Marca> paraMarcas(List<ItemFipeDto> itens) {
-        return converterValidos(itens, item -> new Marca(item.code(), item.name()), "marca");
+        return validos(itens, "marca").stream().map(item -> new Marca(item.code(), item.name())).toList();
     }
 
     static List<Modelo> paraModelos(List<ItemFipeDto> itens) {
-        return converterValidos(itens, item -> new Modelo(item.code(), item.name()), "modelo");
+        return validos(itens, "modelo").stream().map(item -> new Modelo(item.code(), item.name())).toList();
     }
 
+    /**
+     * Anos do modelo descritos só pelo ano ({@code "2018"}, {@code "Zero km"}). Quando o mesmo ano aparece
+     * mais de uma vez (um por combustível), essas opções mantêm o combustível ({@code "2005 Gasolina"},
+     * {@code "2005 Álcool"}), para a pessoa saber a diferença entre elas.
+     */
     static List<AnoModelo> paraAnos(List<ItemFipeDto> itens) {
-        return converterValidos(itens, item -> new AnoModelo(item.code(), descricaoDoAno(item)), "ano");
+        List<ItemFipeDto> anos = validos(itens, "ano");
+        Map<String, Long> vezesDeCadaAno = anos.stream()
+                .collect(Collectors.groupingBy(ConversorFipe::rotuloDoAno, Collectors.counting()));
+        return anos.stream()
+                .map(item -> {
+                    String rotulo = rotuloDoAno(item);
+                    boolean repetido = vezesDeCadaAno.get(rotulo) > 1;
+                    return new AnoModelo(item.code(), repetido ? rotuloComCombustivel(item) : rotulo);
+                })
+                .toList();
     }
 
     static PrecoFipe paraPreco(TipoVeiculo tipo, DetalheVeiculoFipeDto dto) {
@@ -64,31 +79,38 @@ final class ConversorFipe {
         return valor != null && valor == ANO_ZERO_KM_NA_FIPE;
     }
 
-    private static String descricaoDoAno(ItemFipeDto item) {
-        String nome = item.name();
-        Integer ano = item.code() == null ? null : anoDoCodigo(item.code());
-        if (nome == null || ano == null || ano != ANO_ZERO_KM_NA_FIPE) {
-            return nome;
+    /** Só o ano: {@code "2018-5"} → {@code "2018"}, {@code "32000-5"} → {@code "Zero km"}; fora do padrão, o nome. */
+    private static String rotuloDoAno(ItemFipeDto item) {
+        Integer ano = anoDoCodigo(item.code());
+        if (ano == null) {
+            return item.name();
         }
-        return nome.replaceFirst("^" + ANO_ZERO_KM_NA_FIPE, ROTULO_ZERO_KM);
+        return ano == ANO_ZERO_KM_NA_FIPE ? ROTULO_ZERO_KM : String.valueOf(ano);
+    }
+
+    /** O nome da FIPE, que traz o combustível ({@code "2005 Gasolina"}), com o 32000 trocado por "Zero km". */
+    private static String rotuloComCombustivel(ItemFipeDto item) {
+        Integer ano = anoDoCodigo(item.code());
+        if (ano == null || ano != ANO_ZERO_KM_NA_FIPE) {
+            return item.name();
+        }
+        return item.name().replaceFirst("^" + ANO_ZERO_KM_NA_FIPE, ROTULO_ZERO_KM);
     }
 
     private static Integer anoOuNuloSeZeroKm(int anoModelo) {
         return anoModelo == ANO_ZERO_KM_NA_FIPE ? null : anoModelo;
     }
 
-    /** Converte cada item e descarta (com log) os que vierem sem código ou sem nome. */
-    private static <T> List<T> converterValidos(List<ItemFipeDto> itens, Function<ItemFipeDto, T> conversor,
-                                                String descricao) {
-        List<T> convertidos = itens.stream()
+    /** Descarta (com log) os itens que vierem sem código ou sem nome. */
+    private static List<ItemFipeDto> validos(List<ItemFipeDto> itens, String descricao) {
+        List<ItemFipeDto> validos = itens.stream()
                 .filter(item -> item != null && temTexto(item.code()) && temTexto(item.name()))
-                .map(conversor)
                 .toList();
-        if (convertidos.size() < itens.size()) {
+        if (validos.size() < itens.size()) {
             log.warn("FIPE devolveu {} item(ns) de {} sem código ou nome; descartado(s)",
-                    itens.size() - convertidos.size(), descricao);
+                    itens.size() - validos.size(), descricao);
         }
-        return convertidos;
+        return validos;
     }
 
     private static boolean temTexto(String valor) {
