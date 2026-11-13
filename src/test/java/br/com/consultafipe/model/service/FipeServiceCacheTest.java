@@ -130,8 +130,8 @@ class FipeServiceCacheTest {
     }
 
     private static DetalheVeiculoFipeDto detalhe() {
-        return new DetalheVeiculoFipeDto(1, "R$ 48.136,00", "Fiat", "ARGO DRIVE 1.0 6V Flex", 2018, "Flex",
-                "001494-0", "novembro de 2026", "F");
+        return new DetalheVeiculoFipeDto("R$ 48.136,00", "Fiat", "ARGO DRIVE 1.0 6V Flex", 2018, "Flex",
+                "001494-0", "novembro de 2026");
     }
 
     @Configuration(proxyBeanMethods = false)

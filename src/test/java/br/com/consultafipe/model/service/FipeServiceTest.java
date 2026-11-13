@@ -264,8 +264,8 @@ class FipeServiceTest {
     }
 
     private static DetalheVeiculoFipeDto detalhe(Integer anoModelo, String preco) {
-        return new DetalheVeiculoFipeDto(1, preco, "Fiat", "ARGO DRIVE 1.0 6V Flex", anoModelo, "Flex",
-                "001494-0", "novembro de 2026", "F");
+        return new DetalheVeiculoFipeDto(preco, "Fiat", "ARGO DRIVE 1.0 6V Flex", anoModelo, "Flex",
+                "001494-0", "novembro de 2026");
     }
 
     private static List<ItemFipeDto> fixtureDeItens(String nome) throws IOException {

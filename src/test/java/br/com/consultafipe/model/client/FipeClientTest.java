@@ -102,8 +102,8 @@ class FipeClientTest {
 
             DetalheVeiculoFipeDto preco = client.buscarPreco("cars", "21", "7965", "2018-5");
 
-            assertThat(preco).isEqualTo(new DetalheVeiculoFipeDto(1, "R$ 48.136,00", "Fiat",
-                    "ARGO DRIVE 1.0 6V Flex", 2018, "Flex", "001494-0", "novembro de 2026", "F"));
+            assertThat(preco).isEqualTo(new DetalheVeiculoFipeDto("R$ 48.136,00", "Fiat",
+                    "ARGO DRIVE 1.0 6V Flex", 2018, "Flex", "001494-0", "novembro de 2026"));
             servidor.verify();
         }
 
