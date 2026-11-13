@@ -476,9 +476,9 @@
     const VOLTA_INTEIRA = DIGITOS.length;
 
     /** Tambor com a fita 0–9 duas vezes: ao revelar, dá uma volta inteira antes de parar no dígito. */
-    function criarTambor(digito, ordem, centavos) {
+    function criarTambor(digito, ordem) {
         const tambor = document.createElement('span');
-        tambor.className = centavos ? 'tambor tambor--centavos' : 'tambor';
+        tambor.className = 'tambor';
         const fita = document.createElement('span');
         fita.className = 'tambor__fita';
         fita.dataset.digito = digito;
@@ -518,11 +518,11 @@
         for (const caractere of partes[1]) {
             visor.append(caractere === '.'
                 ? criarTexto('tambores__separador', '.')
-                : criarTambor(Number(caractere), ordem++, false));
+                : criarTambor(Number(caractere), ordem++));
         }
         visor.append(criarTexto('tambores__separador', ','));
         for (const caractere of partes[2]) {
-            visor.append(criarTambor(Number(caractere), ordem++, true));
+            visor.append(criarTambor(Number(caractere), ordem++));
         }
 
         preco.replaceChildren(visor, criarTexto('visualmente-oculto', texto));

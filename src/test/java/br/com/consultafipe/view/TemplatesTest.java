@@ -140,8 +140,8 @@ class TemplatesTest {
             String html = renderizar(get("/consulta/carros/21/7965/2018-5"));
 
             assertThat(html)
-                    .contains("Média de mercado em <span>novembro de 2026</span>,")
-                    .contains("não o valor de um veículo específico.");
+                    .contains("Média de mercado em <span>novembro de 2026</span>.")
+                    .doesNotContain("não o valor de um veículo específico");
         }
 
         @Test

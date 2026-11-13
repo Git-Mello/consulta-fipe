@@ -6,7 +6,7 @@
  * Princípios:
  *   - O preço tem lugar fixo no topo e existe desde o início (tambores apagados): a tela nunca começa vazia.
  *   - Luzes-espia em vez de enfeite: a luz de cada etapa acende para mostrar o estado.
- *   - Laranja só para o que está acontecendo agora (etapa atual, foco, centavos).
+ *   - Laranja só para o que está acontecendo agora (etapa atual, foco, item ativo da lista).
  *   - Superfícies planas de painel: sem sombra, raio pequeno só em campos e tambores.
  */
 
@@ -65,8 +65,7 @@
     --cor-divisa: #c9ced4;            /* divisões, nunca sozinha como informação */
     --cor-tambor: #121417;
     --cor-digito: #f4f4f2;            /* 16,8:1 sobre o tambor */
-    --cor-ponteiro: #dc520a;          /* etapa atual e centavos: 3,3:1 sobre o fundo */
-    --cor-sobre-ponteiro: #121417;    /* 4,6:1 */
+    --cor-ponteiro: #dc520a;          /* etapa atual e item ativo: 3,3:1 sobre o fundo */
     --cor-ponteiro-texto: #b23c07;    /* foco e texto laranja: 4,8:1 */
     --cor-luz-acesa: #1c1f23;         /* etapa feita */
     --cor-ambar: #6b4a00;             /* aviso temporário: 7,1:1 sobre o fundo âmbar */
@@ -125,7 +124,6 @@
         --cor-tambor: #0b0c0e;
         --cor-digito: #f4f4f2;
         --cor-ponteiro: #ff8a4c;
-        --cor-sobre-ponteiro: #121417;
         --cor-ponteiro-texto: #ff8a4c;
         --cor-luz-acesa: #e7e9ec;
         --cor-ambar: #f1c46b;
@@ -198,10 +196,6 @@ a {
     max-width: var(--largura-max);
     margin: 0 auto;
     padding: var(--espaco-3) var(--espaco-4);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0 var(--espaco-4);
 }
 
 .cabecalho__marca {
@@ -210,11 +204,6 @@ a {
     font-weight: 600;
     color: var(--cor-texto);
     text-decoration: none;
-}
-
-.cabecalho__descricao {
-    font-size: var(--texto-pequeno);
-    color: var(--cor-texto-suave);
 }
 
 .rodape {
@@ -227,6 +216,8 @@ a {
 .rodape p {
     max-width: var(--largura-max);
     margin: 0 auto;
+    text-align: center;
+    text-wrap: balance; /* no celular, linhas de tamanho parecido; sem suporte, só é ignorado */
 }
 
 /* ---------- Estrutura ---------- */
@@ -386,11 +377,6 @@ a {
     background: var(--cor-tambor);
     border-radius: var(--raio-tambor);
     box-shadow: var(--sombra-tambor); /* a curvatura do cilindro: a única sombra da tela */
-}
-
-.tambor--centavos {
-    color: var(--cor-sobre-ponteiro);
-    background: var(--cor-ponteiro);
 }
 
 .tambor__fita {

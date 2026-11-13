@@ -55,7 +55,7 @@ Direção visual **"Hodômetro"** (painel de instrumentos). O cabeçalho do `sty
 - **Tokens só em `:root`** (cor, fonte, espaço, raio, movimento); o resto do CSS usa apenas `var(--...)`. O tema escuro redefine os mesmos tokens em `prefers-color-scheme: dark`. Cores novas precisam de contraste WCAG AA (o valor fica comentado ao lado do token).
 - **O preço tem lugar fixo no topo** e existe desde o início (tambores apagados `000.000,00`): a tela nunca começa vazia. Na consulta, cada tambor gira e para no dígito.
 - **Luzes-espia em vez de enfeite:** a luz de cada etapa (`data-estado` = `bloqueada`, `atual`, `feita`) mostra o estado; âmbar para falha temporária (503), vermelho para erro.
-- **Laranja (`--cor-ponteiro`) só para o que está acontecendo agora:** etapa atual, foco, item ativo da lista, centavos.
+- **Laranja (`--cor-ponteiro`) só para o que está acontecendo agora:** etapa atual, foco, item ativo da lista. Os tambores do preço são todos iguais (fundo `--cor-tambor`, dígito `--cor-digito`), centavos inclusive.
 - **Superfícies planas:** sem sombra; raio pequeno só em campos e tambores.
 - Fontes **Barlow** e **Barlow Semi Condensed**, servidas pelo projeto em `static/fonts/` (o `OFL.txt` é a licença e acompanha os `.woff2`). Mobile first; alvo de toque de `--alvo-toque` (44px); `prefers-reduced-motion` desliga os giros.
 
