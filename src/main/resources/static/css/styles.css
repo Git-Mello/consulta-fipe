@@ -5,7 +5,7 @@
  *
  * Princípios:
  *   - O preço tem lugar fixo no topo e existe desde o início (tambores apagados): a tela nunca começa vazia.
- *   - Luzes-espia em vez de enfeite: o número de cada etapa acende para mostrar o estado.
+ *   - Luzes-espia em vez de enfeite: a luz de cada etapa acende para mostrar o estado.
  *   - Laranja só para o que está acontecendo agora (etapa atual, foco, centavos).
  *   - Superfícies planas de painel: sem sombra, raio pequeno só em campos e tambores.
  */
@@ -69,7 +69,6 @@
     --cor-sobre-ponteiro: #121417;    /* 4,6:1 */
     --cor-ponteiro-texto: #b23c07;    /* foco e texto laranja: 4,8:1 */
     --cor-luz-acesa: #1c1f23;         /* etapa feita */
-    --cor-sobre-luz-acesa: #f7f8f9;
     --cor-ambar: #6b4a00;             /* aviso temporário: 7,1:1 sobre o fundo âmbar */
     --cor-ambar-fundo: #fbf0d2;
     --cor-ambar-luz: #e0a100;
@@ -129,7 +128,6 @@
         --cor-sobre-ponteiro: #121417;
         --cor-ponteiro-texto: #ff8a4c;
         --cor-luz-acesa: #e7e9ec;
-        --cor-sobre-luz-acesa: #1b1e22;
         --cor-ambar: #f1c46b;
         --cor-ambar-fundo: #2d2717;
         --cor-ambar-luz: #f1b42b;
@@ -517,31 +515,28 @@ a {
     color: var(--cor-texto-suave);
 }
 
-/* Luz-espia da etapa: apagada (bloqueada), laranja (a próxima a escolher) ou acesa (feita) */
+/* Luz-espia da etapa. O estado muda a forma, não só a cor:
+   anel apagado (bloqueada), laranja com aro (a próxima a escolher) ou acesa e cheia (feita).
+   A margem reserva o espaço do aro, para o rótulo não andar quando a luz muda. */
 .campo__luz {
-    display: inline-grid;
-    place-items: center;
     flex: none;
-    width: 1.5rem;
-    height: 1.5rem;
-    border: var(--linha) solid var(--cor-borda);
+    width: 0.75rem;
+    height: 0.75rem;
+    margin: 0 var(--espaco-1);
+    border: 2px solid var(--cor-borda);
     border-radius: 50%;
-    font-family: var(--fonte-painel);
-    font-size: var(--texto-pequeno);
-    font-weight: 600;
-    color: var(--cor-texto-suave);
 }
 
 .campo[data-estado="atual"] .campo__luz {
     border-color: var(--cor-ponteiro);
     background: var(--cor-ponteiro);
-    color: var(--cor-sobre-ponteiro);
+    outline: 2px solid var(--cor-ponteiro);
+    outline-offset: 2px;
 }
 
 .campo[data-estado="feita"] .campo__luz {
     border-color: var(--cor-luz-acesa);
     background: var(--cor-luz-acesa);
-    color: var(--cor-sobre-luz-acesa);
 }
 
 /* Busca e lista formam um controle só */
