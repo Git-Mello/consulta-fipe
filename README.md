@@ -40,6 +40,29 @@ src/main/resources/
 
 ## Pré-requisitos
 
-- **JDK 25** (`java -version`). Nas versões anteriores ao 25 o projeto não compila.
+- **JDK 25** (`java -version`). Nas versões anteriores ao 25 o projeto não compila. Se `java -version` mostrar outra versão, aponte o `JAVA_HOME` para o JDK 25 (no PowerShell: `$env:JAVA_HOME = "C:\caminho\do\jdk-25"`).
 - Não é preciso instalar o Maven: o projeto usa o Maven Wrapper (`mvnw`).
 - Acesso à internet para a aplicação falar com a API da FIPE. Os testes não precisam.
+
+## Como rodar
+
+```bash
+./mvnw spring-boot:run        # Windows: .\mvnw.cmd spring-boot:run
+./mvnw test                   # Windows: .\mvnw.cmd test
+```
+
+Acesse **http://localhost:8080**. Para parar, use `Ctrl + C`.
+
+## Configuração
+
+Tudo é opcional: a aplicação funciona sem token. Para mudar algo, copie o [`.env.example`](.env.example) para `.env` (que não é versionado) ou defina as variáveis de ambiente, que têm prioridade.
+
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `FIPE_API_TOKEN` | *(vazio)* | Token gratuito em [fipe.api.br/register](https://fipe.api.br/register): sobe a cota de 500 para 1.000 consultas por dia |
+| `FIPE_API_BASE_URL` | `https://fipe.api.br/api/v2` | URL da API da FIPE |
+| `FIPE_CONNECT_TIMEOUT` / `FIPE_READ_TIMEOUT` | `5s` / `5s` | Tempo máximo de conexão e de resposta da FIPE |
+| `FIPE_MAX_TENTATIVAS` / `FIPE_ESPERA_INICIAL` | `2` / `300ms` | Novas tentativas quando a FIPE falha temporariamente |
+| `FIPE_CACHE_CATALOGO_TTL` / `FIPE_CACHE_PRECO_TTL` | `24h` / `6h` | Por quanto tempo marcas, modelos e anos, e os preços, ficam em cache |
+| `FIPE_CACHE_TAMANHO_MAXIMO` | `10000` | Máximo de itens em cada cache |
+| `SERVER_PORT` | `8080` | Porta da aplicação |
