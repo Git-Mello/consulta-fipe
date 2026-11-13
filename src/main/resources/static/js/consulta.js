@@ -1,5 +1,6 @@
 /*
- * Consulta FIPE: selects em cascata (tipo → marca → modelo → ano) e inserção do card de preço.
+ * Consulta FIPE: etapas em cascata (tipo → marca → modelo → ano) e inserção do card de preço.
+ * Tipo e ano são <select>; marca e modelo, caixas de busca com lista (combobox).
  *
  * Organização:
  *   1. HTTP   – chamadas ao nosso servidor (nunca à API da FIPE) e tradução das falhas.
@@ -95,36 +96,29 @@
     // =====================================================================
 
     const TEXTOS = {
-        tipo: { selecione: 'Escolha o tipo' },
+        tipo: {},
         marca: {
-            plural: 'marcas', selecione: 'Escolha a marca', aguardando: 'Primeiro escolha o tipo',
+            plural: 'marcas', selecione: 'Digite ou escolha a marca', aguardando: 'Primeiro escolha o tipo',
             vazio: 'A Tabela FIPE não tem marcas para este tipo.',
             semResultado: 'Nenhuma marca com esse nome. Confira a grafia ou apague parte da busca.',
+            escolhaDaLista: 'Escolha uma marca da lista para continuar.',
         },
         modelo: {
-            plural: 'modelos', selecione: 'Escolha o modelo', aguardando: 'Primeiro escolha a marca',
+            plural: 'modelos', selecione: 'Digite ou escolha o modelo', aguardando: 'Primeiro escolha a marca',
             vazio: 'A Tabela FIPE não tem modelos para esta marca.',
             semResultado: 'Nenhum modelo com esse nome. Tente só uma parte, como "argo" ou "1.0".',
+            escolhaDaLista: 'Escolha um modelo da lista para continuar.',
         },
         ano: {
             plural: 'anos', selecione: 'Escolha o ano', aguardando: 'Primeiro escolha o modelo',
             vazio: 'A Tabela FIPE não tem anos para este modelo.',
-            semResultado: 'Nenhum ano com esse texto.',
         },
     };
 
     const TEXTO_CONSULTANDO = 'Consultando a Tabela FIPE…';
 
-    /** Etapas na ordem da cascata. "itens" guarda a lista completa (o filtro trabalha sobre ela). */
-    const etapas = ['tipo', 'marca', 'modelo', 'ano'].map((nome) => ({
-        nome,
-        campo: document.getElementById(`campo-${nome}`),
-        select: document.getElementById(nome),
-        filtro: document.getElementById(`${nome}-filtro`),
-        status: document.getElementById(`${nome}-status`),
-        textos: TEXTOS[nome],
-        itens: [],
-    }));
+    /** Quantas opções a busca desenha de uma vez: centenas de itens a cada tecla deixariam a digitação lenta. */
+    const LIMITE_DA_LISTA = 100;
 
     function normalizar(texto) {
         return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -163,12 +157,264 @@
         etapa.status.append(' ', botao);
     }
 
-    function habilitar(etapa, ativo) {
-        etapa.select.disabled = !ativo;
-        if (etapa.filtro) {
-            etapa.filtro.disabled = !ativo;
-        }
+    function rolagem() {
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
     }
+
+    // ----- Controles das etapas -----
+    // <select> (tipo, ano) e campo de busca (marca, modelo) têm a mesma interface, para o fluxo não
+    // precisar saber qual é qual:
+    //   valor              código escolhido ('' se nenhum)
+    //   mostrar(t, itens)  troca a lista; "t" orienta a pessoa (1ª opção do select, placeholder da busca)
+    //   habilitar(ativo)
+    //   aoMudar(fn)        avisa quando a escolha muda, inclusive quando é desfeita
+
+    function criarControleDeSelect(select) {
+        return {
+            get valor() {
+                return select.value;
+            },
+            mostrar(texto, itens) {
+                preencherOpcoes(select, itens.length ? `${texto} (${itens.length})` : texto, itens);
+            },
+            habilitar(ativo) {
+                select.disabled = !ativo;
+            },
+            aoMudar(callback) {
+                select.addEventListener('change', callback);
+            },
+        };
+    }
+
+    /**
+     * Caixa de busca com lista (padrão "combobox com listbox" do WAI-ARIA APG): a pessoa digita, a lista
+     * filtra, e só vale o item escolhido da lista. O foco fica sempre na caixa; o item destacado pelo teclado
+     * é indicado com aria-activedescendant.
+     */
+    function criarCombobox(entrada, { campo, textos, avisar }) {
+        const lista = document.getElementById(entrada.getAttribute('aria-controls'));
+        let itens = [];
+        let visiveis = [];   // os itens que passam na busca
+        let escolhido = null;
+        let ativo = -1;      // posição, em "visiveis", do item destacado pelo teclado
+        let aoMudar = () => {};
+
+        /** Termos da busca. Com a escolha feita e o texto intacto, a lista volta a mostrar tudo. */
+        function termos() {
+            const texto = escolhido && entrada.value === escolhido.rotulo ? '' : entrada.value;
+            return normalizar(texto).split(/\s+/).filter(Boolean);
+        }
+
+        function contagem(buscando) {
+            if (visiveis.length === 0) {
+                return textos.semResultado;
+            }
+            const resumo = buscando
+                ? `${visiveis.length} de ${itens.length} ${textos.plural}`
+                : `${itens.length} ${textos.plural}`;
+            return visiveis.length > LIMITE_DA_LISTA
+                ? `${resumo}. A lista mostra os ${LIMITE_DA_LISTA} primeiros: digite para refinar.`
+                : resumo;
+        }
+
+        function desenharLista() {
+            const opcoes = visiveis.slice(0, LIMITE_DA_LISTA).map((item, indice) => {
+                const opcao = document.createElement('li');
+                opcao.id = `${entrada.id}-opcao-${indice}`;
+                opcao.className = item === escolhido ? 'combobox__opcao combobox__opcao--escolhida' : 'combobox__opcao';
+                opcao.setAttribute('role', 'option');
+                opcao.setAttribute('aria-selected', 'false');
+                opcao.dataset.indice = indice;
+                opcao.textContent = item.rotulo;
+                return opcao;
+            });
+            lista.replaceChildren(...opcoes);
+            ativo = -1;
+        }
+
+        function aberta() {
+            return entrada.getAttribute('aria-expanded') === 'true';
+        }
+
+        function abrir() {
+            if (entrada.disabled || itens.length === 0) {
+                return;
+            }
+            const busca = termos();
+            visiveis = itens.filter((item) => busca.every((termo) => item.busca.includes(termo)));
+            avisar(contagem(busca.length > 0));
+            desenharLista();
+            const temOpcoes = visiveis.length > 0;
+            lista.hidden = !temOpcoes;
+            entrada.setAttribute('aria-expanded', String(temOpcoes));
+            destacar(escolhido ? visiveis.indexOf(escolhido) : -1);
+        }
+
+        function fechar() {
+            destacar(-1);
+            lista.hidden = true;
+            entrada.setAttribute('aria-expanded', 'false');
+        }
+
+        /** Destaca o item da posição indicada (-1 tira o destaque) e o mantém visível na rolagem da lista. */
+        function destacar(indice) {
+            const opcoes = lista.children;
+            if (opcoes[ativo]) {
+                opcoes[ativo].setAttribute('aria-selected', 'false');
+            }
+            ativo = indice >= 0 && indice < opcoes.length ? indice : -1;
+            if (ativo === -1) {
+                entrada.removeAttribute('aria-activedescendant');
+                return;
+            }
+            const opcao = opcoes[ativo];
+            opcao.setAttribute('aria-selected', 'true');
+            entrada.setAttribute('aria-activedescendant', opcao.id);
+            if (opcao.offsetTop < lista.scrollTop) {
+                lista.scrollTop = opcao.offsetTop;
+            } else if (opcao.offsetTop + opcao.offsetHeight > lista.scrollTop + lista.clientHeight) {
+                lista.scrollTop = opcao.offsetTop + opcao.offsetHeight - lista.clientHeight;
+            }
+        }
+
+        function mover(passo) {
+            if (!aberta()) {
+                abrir();
+            }
+            const quantas = lista.children.length;
+            if (!aberta() || quantas === 0) {
+                return;
+            }
+            if (ativo === -1) {
+                destacar(passo > 0 ? 0 : quantas - 1);
+            } else {
+                destacar((ativo + passo + quantas) % quantas);
+            }
+        }
+
+        function escolher(item) {
+            escolhido = item;
+            entrada.value = item.rotulo;
+            fechar();
+            avisar('');
+            aoMudar();
+        }
+
+        function desfazerEscolha() {
+            if (escolhido) {
+                escolhido = null;
+                aoMudar();
+            }
+        }
+
+        /** No celular, sobe o campo para o topo: a lista abre embaixo dele, acima do teclado virtual. */
+        function trazerParaCima() {
+            if (window.matchMedia('(max-width: 39.99rem)').matches) {
+                campo.scrollIntoView({ block: 'start', behavior: rolagem() });
+            }
+        }
+
+        function aoTeclar(evento) {
+            if (evento.key === 'ArrowDown' || evento.key === 'ArrowUp') {
+                evento.preventDefault();
+                mover(evento.key === 'ArrowDown' ? 1 : -1);
+            } else if (evento.key === 'Enter' && aberta()) {
+                // Sem destaque, um resultado único também vale: "argo 1.0" + Enter
+                const indice = ativo !== -1 ? ativo : (visiveis.length === 1 ? 0 : -1);
+                if (indice !== -1) {
+                    evento.preventDefault();
+                    escolher(visiveis[indice]);
+                }
+            } else if (evento.key === 'Escape') {
+                if (aberta()) {
+                    evento.preventDefault();
+                    fechar();
+                    if (escolhido) {
+                        avisar(''); // a contagem era da lista, que fechou; a escolha continua valendo
+                    }
+                } else if (entrada.value) {
+                    evento.preventDefault();
+                    entrada.value = '';
+                    avisar('');
+                    desfazerEscolha();
+                }
+            }
+        }
+
+        entrada.addEventListener('keydown', aoTeclar);
+        entrada.addEventListener('input', () => {
+            desfazerEscolha(); // mudou o texto: a escolha anterior não vale mais
+            abrir();
+        });
+        entrada.addEventListener('focus', () => {
+            abrir();
+            trazerParaCima();
+        });
+        entrada.addEventListener('click', () => {
+            if (!aberta()) {
+                abrir();
+            }
+        });
+        entrada.addEventListener('blur', () => {
+            fechar();
+            if (escolhido || !entrada.value.trim()) {
+                avisar('');
+            } else {
+                avisar(visiveis.length ? textos.escolhaDaLista : textos.semResultado);
+            }
+        });
+        // Clicar ou tocar na lista não tira o foco da caixa; a rolagem por toque não escolhe (só o "click").
+        lista.addEventListener('mousedown', (evento) => evento.preventDefault());
+        lista.addEventListener('click', (evento) => {
+            const opcao = evento.target.closest('[role="option"]');
+            if (opcao) {
+                escolher(visiveis[Number(opcao.dataset.indice)]);
+            }
+        });
+
+        return {
+            get valor() {
+                return escolhido ? escolhido.codigo : '';
+            },
+            mostrar(texto, novosItens) {
+                itens = novosItens;
+                visiveis = [];
+                escolhido = null;
+                entrada.value = '';
+                entrada.placeholder = texto;
+                fechar();
+                lista.replaceChildren();
+            },
+            habilitar(ativa) {
+                entrada.disabled = !ativa;
+                if (!ativa) {
+                    fechar();
+                }
+            },
+            aoMudar(callback) {
+                aoMudar = callback;
+            },
+        };
+    }
+
+    /** Etapas na ordem da cascata, cada uma com o seu controle. */
+    const etapas = ['tipo', 'marca', 'modelo', 'ano'].map((nome) => {
+        const etapa = {
+            nome,
+            campo: document.getElementById(`campo-${nome}`),
+            status: document.getElementById(`${nome}-status`),
+            textos: TEXTOS[nome],
+        };
+        const elemento = document.getElementById(nome);
+        etapa.controle = elemento.tagName === 'SELECT'
+            ? criarControleDeSelect(elemento)
+            : criarCombobox(elemento, {
+                campo: etapa.campo,
+                textos: etapa.textos,
+                avisar: (texto) => mostrarStatus(etapa, texto),
+            });
+        return etapa;
+    });
 
     function marcarOcupado(etapa, ocupado) {
         if (ocupado) {
@@ -180,7 +426,7 @@
 
     /** Luzes das etapas: as anteriores à primeira sem escolha estão feitas; ela é a atual; o resto, bloqueado. */
     function atualizarLuzes() {
-        const atual = etapas.findIndex((etapa) => !etapa.select.value);
+        const atual = etapas.findIndex((etapa) => !etapa.controle.valor);
         etapas.forEach((etapa, indice) => {
             if (atual === -1 || indice < atual) {
                 etapa.campo.dataset.estado = 'feita';
@@ -190,59 +436,38 @@
         });
     }
 
-    /** Volta a etapa ao estado inicial: sem opções, desabilitada e com o filtro limpo. */
+    /** Volta a etapa ao estado inicial: sem itens, sem escolha e desabilitada. */
     function bloquearEtapa(etapa) {
-        etapa.itens = [];
-        if (etapa.filtro) {
-            etapa.filtro.value = '';
-        }
-        preencherOpcoes(etapa.select, etapa.textos.aguardando, []);
-        habilitar(etapa, false);
+        etapa.controle.mostrar(etapa.textos.aguardando, []);
+        etapa.controle.habilitar(false);
         marcarOcupado(etapa, false);
         mostrarStatus(etapa, '');
     }
 
     function mostrarCarregando(etapa) {
-        preencherOpcoes(etapa.select, 'Carregando…', []);
-        habilitar(etapa, false);
+        etapa.controle.mostrar('Carregando…', []);
+        etapa.controle.habilitar(false);
         marcarOcupado(etapa, true);
         mostrarStatus(etapa, `Buscando ${etapa.textos.plural} na Tabela FIPE…`, 'carregando');
     }
 
     function mostrarItens(etapa, itens) {
-        etapa.itens = itens;
         marcarOcupado(etapa, false);
         if (itens.length === 0) {
-            preencherOpcoes(etapa.select, etapa.textos.vazio, []);
-            habilitar(etapa, false);
+            etapa.controle.mostrar(etapa.textos.vazio, []);
+            etapa.controle.habilitar(false);
             mostrarStatus(etapa, etapa.textos.vazio);
             return;
         }
-        preencherOpcoes(etapa.select, `${etapa.textos.selecione} (${itens.length})`, itens);
-        habilitar(etapa, true);
+        etapa.controle.mostrar(etapa.textos.selecione, itens);
+        etapa.controle.habilitar(true);
         mostrarStatus(etapa, '');
     }
 
-    /** Reaplica o filtro sobre a lista completa. Devolve false se a opção escolhida deixou de aparecer. */
-    function aplicarFiltro(etapa) {
-        const termos = normalizar(etapa.filtro.value).split(/\s+/).filter(Boolean);
-        const visiveis = etapa.itens.filter((item) => termos.every((termo) => item.busca.includes(termo)));
-        const escolhido = etapa.select.value;
-
-        preencherOpcoes(etapa.select, `${etapa.textos.selecione} (${visiveis.length})`, visiveis);
-        const continuaVisivel = visiveis.some((item) => item.codigo === escolhido);
-        if (continuaVisivel) {
-            etapa.select.value = escolhido;
-        }
-
-        if (termos.length === 0) {
-            mostrarStatus(etapa, '');
-        } else if (visiveis.length === 0) {
-            mostrarStatus(etapa, etapa.textos.semResultado);
-        } else {
-            mostrarStatus(etapa, `${visiveis.length} de ${etapa.itens.length} ${etapa.textos.plural}`);
-        }
-        return !escolhido || continuaVisivel;
+    function mostrarFalhaNaLista(etapa, mensagem, tentarDeNovo) {
+        marcarOcupado(etapa, false);
+        etapa.controle.mostrar('A lista não carregou', []);
+        mostrarErroNaEtapa(etapa, mensagem, tentarDeNovo);
     }
 
     // ----- Leitor do preço: hodômetro de tambores -----
@@ -380,8 +605,7 @@
     }
 
     function rolarAteResultado() {
-        const semAnimacao = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        areaResultado.scrollIntoView({ block: 'nearest', behavior: semAnimacao ? 'auto' : 'smooth' });
+        areaResultado.scrollIntoView({ block: 'nearest', behavior: rolagem() });
     }
 
     // =====================================================================
@@ -407,7 +631,7 @@
     }
 
     function selecaoAtual() {
-        return Object.fromEntries(etapas.map((etapa) => [etapa.nome, etapa.select.value]));
+        return Object.fromEntries(etapas.map((etapa) => [etapa.nome, etapa.controle.valor]));
     }
 
     function mensagemDe(erro) {
@@ -431,7 +655,7 @@
     function aoEscolher(indice) {
         limparDepoisDe(indice);
         atualizarLuzes();
-        if (!etapas[indice].select.value) {
+        if (!etapas[indice].controle.valor) {
             return;
         }
         const proxima = etapas[indice + 1];
@@ -452,9 +676,7 @@
             if (erro.name === 'AbortError') {
                 return; // a seleção mudou: a resposta antiga é descartada
             }
-            marcarOcupado(etapa, false);
-            preencherOpcoes(etapa.select, 'A lista não carregou', []);
-            mostrarErroNaEtapa(etapa, mensagemDe(erro), () => carregarEtapa(etapa));
+            mostrarFalhaNaLista(etapa, mensagemDe(erro), () => carregarEtapa(etapa));
         } finally {
             if (pendentes.get(etapa.nome) === controle) {
                 pendentes.delete(etapa.nome);
@@ -479,24 +701,11 @@
         }
     }
 
-    function aoFiltrar(indice) {
-        const continuaValido = aplicarFiltro(etapas[indice]);
-        if (!continuaValido) {
-            limparDepoisDe(indice); // a opção escolhida sumiu do filtro: as etapas seguintes perdem a base
-        }
-        atualizarLuzes();
-    }
-
     function iniciar() {
         formulario.addEventListener('submit', (evento) => evento.preventDefault());
-        etapas.forEach((etapa, indice) => {
-            etapa.select.addEventListener('change', () => aoEscolher(indice));
-            if (etapa.filtro) {
-                etapa.filtro.addEventListener('input', () => aoFiltrar(indice));
-            }
-        });
+        etapas.forEach((etapa, indice) => etapa.controle.aoMudar(() => aoEscolher(indice)));
         // O navegador pode restaurar o tipo ao voltar para a página: recomeça a cascata a partir dele.
-        if (etapas[0].select.value) {
+        if (etapas[0].controle.valor) {
             aoEscolher(0);
         } else {
             limparResultado();

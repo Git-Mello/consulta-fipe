@@ -40,26 +40,28 @@
                 <p id="tipo-status" class="campo__status" aria-live="polite"></p>
             </div>
 
+            <!-- Marca e modelo: listas longas, então uma caixa só para buscar e escolher
+                 (combobox com lista do WAI-ARIA, montado pelo consulta.js) -->
             <div class="campo" id="campo-marca" data-estado="bloqueada">
-                <label class="campo__rotulo" for="marca"><span class="campo__luz"></span>Marca</label>
-                <div class="campo__controle">
-                    <input id="marca-filtro" class="campo__filtro" type="search" placeholder="Buscar marca"
-                           aria-label="Buscar marca" aria-controls="marca" disabled>
-                    <select id="marca" name="marca" class="campo__select" aria-describedby="marca-status" disabled>
-                        <option value="">Primeiro escolha o tipo</option>
-                    </select>
+                <label class="campo__rotulo" id="marca-rotulo" for="marca"><span class="campo__luz"></span>Marca</label>
+                <div class="combobox">
+                    <input id="marca" name="marca" class="campo__entrada" type="text" role="combobox"
+                           aria-autocomplete="list" aria-expanded="false" aria-controls="marca-lista"
+                           aria-describedby="marca-status" autocomplete="off" spellcheck="false"
+                           placeholder="Primeiro escolha o tipo" disabled>
+                    <ul id="marca-lista" class="combobox__lista" role="listbox" aria-labelledby="marca-rotulo" hidden></ul>
                 </div>
                 <p id="marca-status" class="campo__status" aria-live="polite"></p>
             </div>
 
             <div class="campo" id="campo-modelo" data-estado="bloqueada">
-                <label class="campo__rotulo" for="modelo"><span class="campo__luz"></span>Modelo</label>
-                <div class="campo__controle">
-                    <input id="modelo-filtro" class="campo__filtro" type="search" placeholder="Buscar modelo, ex.: argo 1.0"
-                           aria-label="Buscar modelo" aria-controls="modelo" disabled>
-                    <select id="modelo" name="modelo" class="campo__select" aria-describedby="modelo-status" disabled>
-                        <option value="">Primeiro escolha a marca</option>
-                    </select>
+                <label class="campo__rotulo" id="modelo-rotulo" for="modelo"><span class="campo__luz"></span>Modelo</label>
+                <div class="combobox">
+                    <input id="modelo" name="modelo" class="campo__entrada" type="text" role="combobox"
+                           aria-autocomplete="list" aria-expanded="false" aria-controls="modelo-lista"
+                           aria-describedby="modelo-status" autocomplete="off" spellcheck="false"
+                           placeholder="Primeiro escolha a marca" disabled>
+                    <ul id="modelo-lista" class="combobox__lista" role="listbox" aria-labelledby="modelo-rotulo" hidden></ul>
                 </div>
                 <p id="modelo-status" class="campo__status" aria-live="polite"></p>
             </div>

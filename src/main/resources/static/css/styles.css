@@ -539,13 +539,8 @@ a {
     background: var(--cor-luz-acesa);
 }
 
-/* Busca e lista formam um controle só */
-.campo__controle {
-    display: grid;
-}
-
 .campo__select,
-.campo__filtro {
+.campo__entrada {
     width: 100%;
     min-height: var(--alvo-toque);
     padding: var(--espaco-2) var(--espaco-3);
@@ -556,24 +551,13 @@ a {
     border-radius: var(--raio-campo);
 }
 
-.campo__controle .campo__filtro {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-}
-
-.campo__controle .campo__select {
-    margin-top: calc(var(--linha) * -1);
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-}
-
-.campo__filtro::placeholder {
+.campo__entrada::placeholder {
     color: var(--cor-texto-suave);
     opacity: 1;
 }
 
 .campo__select:disabled,
-.campo__filtro:disabled {
+.campo__entrada:disabled {
     color: var(--cor-texto-suave);
     background-color: var(--cor-recesso);
     border-color: var(--cor-divisa);
@@ -581,9 +565,98 @@ a {
 }
 
 .campo__select:focus-visible,
-.campo__filtro:focus-visible {
-    position: relative; /* o contorno de foco passa por cima do campo vizinho */
+.campo__entrada:focus-visible {
     outline-offset: 0;
+}
+
+/* Busca com lista (marca e modelo): a lista abre colada embaixo da caixa, por cima do que vem depois */
+
+.campo {
+    scroll-margin-top: var(--espaco-4); /* no celular, o campo sobe até o topo ao receber o foco */
+}
+
+/* No celular, a página é curta demais para o campo subir até o topo. Enquanto a busca tem o foco,
+   sobra espaço embaixo, e a lista fica acima do teclado virtual. */
+@media (max-width: 39.99rem) {
+    body:has(.combobox:focus-within) {
+        padding-bottom: 70svh;
+    }
+}
+
+.combobox {
+    position: relative;
+}
+
+.combobox .campo__entrada {
+    padding-right: calc(var(--espaco-3) * 2 + 0.75rem); /* espaço da seta */
+}
+
+/* A seta, como a do select: indica que há uma lista */
+.combobox::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: var(--espaco-4);
+    width: 0.45rem;
+    height: 0.45rem;
+    border-right: 2px solid var(--cor-texto-suave);
+    border-bottom: 2px solid var(--cor-texto-suave);
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+}
+
+.combobox:has(> [aria-expanded="true"])::after {
+    transform: translateY(-30%) rotate(-135deg);
+}
+
+.combobox:has(> [aria-expanded="true"]) .campo__entrada {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.combobox__lista {
+    position: absolute;
+    z-index: 10;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: min(20rem, 45svh); /* cabe acima do teclado virtual no celular */
+    margin: 0;
+    padding: var(--espaco-1) 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    list-style: none;
+    background: var(--cor-superficie);
+    border: var(--linha) solid var(--cor-borda);
+    border-top-color: var(--cor-divisa);
+    border-radius: 0 0 var(--raio-campo) var(--raio-campo);
+}
+
+.combobox__opcao {
+    display: flex;
+    align-items: center;
+    min-height: var(--alvo-toque);
+    padding: var(--espaco-1) var(--espaco-3);
+    border-left: var(--linha-forte) solid transparent;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+/* Só com mouse: no toque, o :hover ficaria "grudado" no item tocado */
+@media (hover: hover) {
+    .combobox__opcao:hover {
+        background: var(--cor-mostrador);
+    }
+}
+
+/* O item destacado pelo teclado: fundo de recesso e a barra laranja, a cor do "agora" */
+.combobox__opcao[aria-selected="true"] {
+    background: var(--cor-recesso);
+    border-left-color: var(--cor-ponteiro);
+}
+
+.combobox__opcao--escolhida {
+    font-weight: 600;
 }
 
 .campo__status {

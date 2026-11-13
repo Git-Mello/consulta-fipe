@@ -62,17 +62,28 @@ class TemplatesTest {
             assertThat(html).contains("<option value=\"carros\">Carros</option>",
                     "<option value=\"motos\">Motos</option>",
                     "<option value=\"caminhoes\">Caminhões</option>");
-            assertThat(tag(html, "select", "marca")).contains("disabled");
-            assertThat(tag(html, "select", "modelo")).contains("disabled");
+            assertThat(tag(html, "input", "marca")).contains("disabled");
+            assertThat(tag(html, "input", "modelo")).contains("disabled");
             assertThat(tag(html, "select", "ano")).contains("disabled");
         }
 
-        @Test
-        void deveTerFiltroDeBuscaNasMarcasENosModelos() throws Exception {
+        @ParameterizedTest
+        @CsvSource({"marca", "modelo"})
+        void deveTerUmaCaixaDeBuscaComListaNoPadraoCombobox(String campo) throws Exception {
             String html = renderizar(get("/"));
 
-            assertThat(tag(html, "input", "marca-filtro")).contains("type=\"search\"", "aria-controls=\"marca\"");
-            assertThat(tag(html, "input", "modelo-filtro")).contains("type=\"search\"", "aria-controls=\"modelo\"");
+            assertThat(tag(html, "input", campo)).contains(
+                    "type=\"text\"",
+                    "role=\"combobox\"",
+                    "aria-autocomplete=\"list\"",
+                    "aria-expanded=\"false\"",
+                    "aria-controls=\"" + campo + "-lista\"",
+                    "aria-describedby=\"" + campo + "-status\"",
+                    "autocomplete=\"off\"");
+            assertThat(tag(html, "ul", campo + "-lista")).contains(
+                    "role=\"listbox\"", "aria-labelledby=\"" + campo + "-rotulo\"", "hidden");
+            assertThat(tag(html, "label", campo + "-rotulo")).contains("for=\"" + campo + "\"");
+            assertThat(html).doesNotContain(campo + "-filtro");
         }
 
         @Test
