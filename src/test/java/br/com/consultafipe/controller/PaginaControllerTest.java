@@ -88,7 +88,7 @@ class PaginaControllerTest {
 
             mvc.perform(get("/consulta/carros/21/7965/32000-5"))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Zero km · Flex")));
+                    .andExpect(content().string(containsString("<dd>Zero km</dd>")));
         }
 
         @Test

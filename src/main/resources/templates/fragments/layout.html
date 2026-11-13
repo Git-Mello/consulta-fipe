@@ -9,6 +9,9 @@
     <meta name="color-scheme" content="light dark">
     <title th:text="${titulo}">Consulta FIPE</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <!-- As duas fontes da primeira tela: texto e dígitos do leitor -->
+    <link rel="preload" as="font" type="font/woff2" crossorigin th:href="@{/fonts/barlow-400.woff2}">
+    <link rel="preload" as="font" type="font/woff2" crossorigin th:href="@{/fonts/barlow-semi-condensed-600.woff2}">
     <link rel="stylesheet" th:href="@{/css/styles.css}">
 </head>
 
@@ -16,11 +19,8 @@
 
 <header th:fragment="cabecalho" class="cabecalho">
     <div class="cabecalho__conteudo">
-        <a class="cabecalho__marca" th:href="@{/}">
-            <span class="cabecalho__logo" aria-hidden="true">F</span>
-            Consulta FIPE
-        </a>
-        <p class="cabecalho__descricao">Preço médio de veículos na Tabela FIPE</p>
+        <a class="cabecalho__marca" th:href="@{/}">Consulta FIPE</a>
+        <p class="cabecalho__descricao">Preço médio de carros, motos e caminhões</p>
     </div>
 </header>
 
@@ -28,7 +28,7 @@
     <p>
         Valores da Tabela FIPE, consultados em
         <a href="https://fipe.api.br" rel="noopener noreferrer" target="_blank">fipe.api.br</a>.
-        São preços médios de referência, não o valor de venda de um veículo específico.
+        São preços médios de referência.
     </p>
 </footer>
 

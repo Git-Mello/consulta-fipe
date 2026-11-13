@@ -7,11 +7,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.consultafipe.controller.PaginaController;
+import br.com.consultafipe.exception.LimiteDeUsoExcedidoException;
 import br.com.consultafipe.exception.RecursoNaoEncontradoException;
 import br.com.consultafipe.fixture.DominioFixtures;
 import br.com.consultafipe.model.domain.TipoVeiculo;
 import br.com.consultafipe.model.service.FipeService;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Nested;
@@ -89,11 +91,12 @@ class TemplatesTest {
 
         @ParameterizedTest(name = "{0}: {1}")
         @CsvSource(delimiter = '|', value = {
+                "Tipo              | Carros",
                 "Marca             | Fiat",
                 "Modelo            | ARGO DRIVE 1.0 6V Flex",
-                "Ano / combustível | 2018 · Flex",
-                "Código FIPE       | 001494-0",
-                "Mês de referência | novembro de 2026"})
+                "Ano-modelo        | 2018",
+                "Combustível       | Flex",
+                "Código FIPE       | 001494-0"})
         void deveMostrarCadaDetalheDoVeiculoNoCard(String rotulo, String valor) throws Exception {
             when(service.buscarPreco(TipoVeiculo.CARROS, "21", "7965", "2018-5"))
                     .thenReturn(DominioFixtures.precoArgo2018());
@@ -114,8 +117,20 @@ class TemplatesTest {
             assertThat(html)
                     .startsWith("<article class=\"resultado\"")
                     .contains("<p class=\"resultado__preco\">R$ 48.136,00</p>")
-                    .contains("<p class=\"resultado__tipo\">Carros</p>")
+                    .contains("<dd class=\"resultado__tipo\">Carros</dd>")
                     .doesNotContain("<html", "<head>", "<body");
+        }
+
+        @Test
+        void deveExplicarOMesDeReferenciaJuntoDoPreco() throws Exception {
+            when(service.buscarPreco(TipoVeiculo.CARROS, "21", "7965", "2018-5"))
+                    .thenReturn(DominioFixtures.precoArgo2018());
+
+            String html = renderizar(get("/consulta/carros/21/7965/2018-5"));
+
+            assertThat(html)
+                    .contains("Média de mercado em <span>novembro de 2026</span>,")
+                    .contains("não o valor de um veículo específico.");
         }
 
         @Test
@@ -128,9 +143,23 @@ class TemplatesTest {
                     .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
             assertThat(html)
-                    .startsWith("<div class=\"resultado resultado--erro\" role=\"alert\">")
+                    .startsWith("<div class=\"resultado resultado--erro\" role=\"alert\" data-gravidade=\"falha\">")
                     .contains("<p class=\"resultado__titulo\">Não encontrado</p>")
                     .contains("Não encontramos esse veículo na Tabela FIPE");
+        }
+
+        @Test
+        void deveMarcarComoTemporarioOErroDeCotaEsgotada() throws Exception {
+            when(service.buscarPreco(TipoVeiculo.CARROS, "21", "7965", "2018-5"))
+                    .thenThrow(new LimiteDeUsoExcedidoException("FIPE respondeu 429", Duration.ofHours(3)));
+
+            String html = mvc.perform(get("/consulta/carros/21/7965/2018-5"))
+                    .andExpect(status().isServiceUnavailable())
+                    .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+            assertThat(html)
+                    .startsWith("<div class=\"resultado resultado--erro\" role=\"alert\" data-gravidade=\"temporaria\">")
+                    .contains("<p class=\"resultado__titulo\">Cota diária esgotada</p>");
         }
     }
 
@@ -160,8 +189,8 @@ class TemplatesTest {
 
             assertThat(html)
                     .contains("<title>Erro · Consulta FIPE</title>")
-                    .contains("<h1 class=\"erro__titulo\">Algo deu errado</h1>")
-                    .contains("Ocorreu um erro inesperado. Tente novamente.");
+                    .contains("<h1 class=\"erro__titulo\">A página falhou</h1>")
+                    .contains("Um erro do nosso lado interrompeu a página. Volte para a consulta e tente de novo.");
         }
     }
 
@@ -169,7 +198,8 @@ class TemplatesTest {
     class ArquivosEstaticos {
 
         @ParameterizedTest
-        @CsvSource({"/css/styles.css, text/css", "/js/consulta.js, text/javascript", "/favicon.svg, image/svg+xml"})
+        @CsvSource({"/css/styles.css, text/css", "/js/consulta.js, text/javascript", "/favicon.svg, image/svg+xml",
+                "/fonts/barlow-400.woff2, font/woff2", "/fonts/barlow-semi-condensed-600.woff2, font/woff2"})
         void deveServirOsArquivosEstaticos(String caminho, String tipo) throws Exception {
             mvc.perform(get(caminho))
                     .andExpect(status().isOk())

@@ -21,8 +21,8 @@
     // 1. HTTP
     // =====================================================================
 
-    const MENSAGEM_SEM_CONEXAO = 'Não foi possível falar com o servidor. Verifique sua conexão e tente novamente.';
-    const MENSAGEM_INESPERADA = 'Ocorreu um erro inesperado. Tente novamente.';
+    const MENSAGEM_SEM_CONEXAO = 'Sem resposta do servidor. Confira sua conexão com a internet e tente de novo.';
+    const MENSAGEM_INESPERADA = 'Um erro do nosso lado interrompeu a consulta. Tente de novo.';
 
     /** Falha com mensagem pronta para o usuário. */
     class ErroDeConsulta extends Error {
@@ -95,20 +95,25 @@
     // =====================================================================
 
     const TEXTOS = {
-        tipo: { selecione: 'Selecione o tipo' },
+        tipo: { selecione: 'Escolha o tipo' },
         marca: {
-            plural: 'marcas', selecione: 'Selecione a marca', aguardando: 'Escolha o tipo primeiro',
-            vazio: 'Nenhuma marca disponível para este tipo.', semResultado: 'Nenhuma marca corresponde ao filtro.',
+            plural: 'marcas', selecione: 'Escolha a marca', aguardando: 'Primeiro escolha o tipo',
+            vazio: 'A Tabela FIPE não tem marcas para este tipo.',
+            semResultado: 'Nenhuma marca com esse nome. Confira a grafia ou apague parte da busca.',
         },
         modelo: {
-            plural: 'modelos', selecione: 'Selecione o modelo', aguardando: 'Escolha a marca primeiro',
-            vazio: 'Nenhum modelo disponível para esta marca.', semResultado: 'Nenhum modelo corresponde ao filtro.',
+            plural: 'modelos', selecione: 'Escolha o modelo', aguardando: 'Primeiro escolha a marca',
+            vazio: 'A Tabela FIPE não tem modelos para esta marca.',
+            semResultado: 'Nenhum modelo com esse nome. Tente só uma parte, como "argo" ou "1.0".',
         },
         ano: {
-            plural: 'anos', selecione: 'Selecione o ano', aguardando: 'Escolha o modelo primeiro',
-            vazio: 'Nenhum ano disponível para este modelo.', semResultado: 'Nenhum ano corresponde ao filtro.',
+            plural: 'anos', selecione: 'Escolha o ano', aguardando: 'Primeiro escolha o modelo',
+            vazio: 'A Tabela FIPE não tem anos para este modelo.',
+            semResultado: 'Nenhum ano com esse texto.',
         },
     };
+
+    const TEXTO_CONSULTANDO = 'Consultando a Tabela FIPE…';
 
     /** Etapas na ordem da cascata. "itens" guarda a lista completa (o filtro trabalha sobre ela). */
     const etapas = ['tipo', 'marca', 'modelo', 'ano'].map((nome) => ({
@@ -144,7 +149,7 @@
     }
 
     function mostrarStatus(etapa, texto, tipo = '') {
-        etapa.status.textContent = texto; // também remove um botão "Tentar novamente" anterior
+        etapa.status.textContent = texto; // também remove um botão "Tentar de novo" anterior
         etapa.status.dataset.tipo = tipo;
     }
 
@@ -153,7 +158,7 @@
         const botao = document.createElement('button');
         botao.type = 'button';
         botao.className = 'botao-texto';
-        botao.textContent = 'Tentar novamente';
+        botao.textContent = 'Tentar de novo';
         botao.addEventListener('click', tentarDeNovo);
         etapa.status.append(' ', botao);
     }
@@ -173,6 +178,18 @@
         }
     }
 
+    /** Luzes das etapas: as anteriores à primeira sem escolha estão feitas; ela é a atual; o resto, bloqueado. */
+    function atualizarLuzes() {
+        const atual = etapas.findIndex((etapa) => !etapa.select.value);
+        etapas.forEach((etapa, indice) => {
+            if (atual === -1 || indice < atual) {
+                etapa.campo.dataset.estado = 'feita';
+            } else {
+                etapa.campo.dataset.estado = indice === atual ? 'atual' : 'bloqueada';
+            }
+        });
+    }
+
     /** Volta a etapa ao estado inicial: sem opções, desabilitada e com o filtro limpo. */
     function bloquearEtapa(etapa) {
         etapa.itens = [];
@@ -189,7 +206,7 @@
         preencherOpcoes(etapa.select, 'Carregando…', []);
         habilitar(etapa, false);
         marcarOcupado(etapa, true);
-        mostrarStatus(etapa, `Carregando ${etapa.textos.plural}…`, 'carregando');
+        mostrarStatus(etapa, `Buscando ${etapa.textos.plural} na Tabela FIPE…`, 'carregando');
     }
 
     function mostrarItens(etapa, itens) {
@@ -228,27 +245,120 @@
         return !escolhido || continuaVisivel;
     }
 
-    function mostrarDicaNoResultado(texto) {
-        const dica = document.createElement('p');
-        dica.className = 'resultado-area__dica';
-        dica.textContent = texto;
-        areaResultado.replaceChildren(dica);
+    // ----- Leitor do preço: hodômetro de tambores -----
+
+    const DIGITOS = '0123456789';
+    const VOLTA_INTEIRA = DIGITOS.length;
+
+    /** Tambor com a fita 0–9 duas vezes: ao revelar, dá uma volta inteira antes de parar no dígito. */
+    function criarTambor(digito, ordem, centavos) {
+        const tambor = document.createElement('span');
+        tambor.className = centavos ? 'tambor tambor--centavos' : 'tambor';
+        const fita = document.createElement('span');
+        fita.className = 'tambor__fita';
+        fita.dataset.digito = digito;
+        fita.style.setProperty('--ordem', ordem);
+        for (const numero of DIGITOS + DIGITOS) {
+            const linha = document.createElement('span');
+            linha.textContent = numero;
+            fita.append(linha);
+        }
+        tambor.append(fita);
+        return tambor;
+    }
+
+    function criarTexto(classe, texto) {
+        const elemento = document.createElement('span');
+        elemento.className = classe;
+        elemento.textContent = texto;
+        return elemento;
+    }
+
+    /**
+     * Troca o texto do preço ("R$ 48.136,00") por tambores. O texto continua no elemento, oculto na tela,
+     * para leitores de tela lerem o valor de uma vez. Devolve o visor, ou null se o formato for inesperado.
+     */
+    function montarTambores(preco) {
+        const texto = preco.textContent.trim();
+        const partes = /^R\$\s*([\d.]+),(\d{2})$/.exec(texto);
+        if (!partes) {
+            return null; // fica o texto puro, que já é legível
+        }
+        const visor = document.createElement('span');
+        visor.className = 'tambores';
+        visor.setAttribute('aria-hidden', 'true');
+        visor.append(criarTexto('tambores__moeda', 'R$'));
+
+        let ordem = 0;
+        for (const caractere of partes[1]) {
+            visor.append(caractere === '.'
+                ? criarTexto('tambores__separador', '.')
+                : criarTambor(Number(caractere), ordem++, false));
+        }
+        visor.append(criarTexto('tambores__separador', ','));
+        for (const caractere of partes[2]) {
+            visor.append(criarTambor(Number(caractere), ordem++, true));
+        }
+
+        preco.replaceChildren(visor, criarTexto('visualmente-oculto', texto));
+        return visor;
+    }
+
+    /** O momento do preço: cada tambor gira uma volta e para no dígito, da esquerda para a direita. */
+    function girarTambores(visor) {
+        // Dois quadros: o primeiro pinta os tambores no zero; o segundo dispara a transição do CSS.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            for (const fita of visor.querySelectorAll('.tambor__fita')) {
+                fita.style.setProperty('--posicao', VOLTA_INTEIRA + Number(fita.dataset.digito));
+            }
+        }));
+    }
+
+    /** Modelo do leitor parado, tirado do HTML da página (com os tambores já montados). */
+    const leitorParado = (function () {
+        const modelo = areaResultado.querySelector('.resultado--parado');
+        if (!modelo) {
+            return null;
+        }
+        const copia = modelo.cloneNode(true);
+        const preco = copia.querySelector('.resultado__preco');
+        if (preco) {
+            montarTambores(preco);
+        }
+        return copia;
+    })();
+
+    function mostrarLeitorParado(textoReferencia) {
+        if (!leitorParado) {
+            return;
+        }
+        const leitor = leitorParado.cloneNode(true);
+        const referencia = leitor.querySelector('.resultado__referencia');
+        if (textoReferencia && referencia) {
+            referencia.textContent = textoReferencia;
+        }
+        areaResultado.replaceChildren(leitor);
     }
 
     function limparResultado() {
         areaResultado.removeAttribute('aria-busy');
-        mostrarDicaNoResultado('Escolha o tipo, a marca, o modelo e o ano para ver o preço FIPE.');
+        mostrarLeitorParado('');
     }
 
     function mostrarResultadoCarregando() {
         areaResultado.setAttribute('aria-busy', 'true');
-        mostrarDicaNoResultado('Consultando o preço na Tabela FIPE…');
+        mostrarLeitorParado(TEXTO_CONSULTANDO);
     }
 
     /** Insere o fragmento gerado pelo nosso servidor (escapado pelo Thymeleaf com th:text). */
     function inserirFragmento(html) {
         areaResultado.removeAttribute('aria-busy');
         areaResultado.innerHTML = html;
+        const preco = areaResultado.querySelector('.resultado__preco');
+        const visor = preco ? montarTambores(preco) : null;
+        if (visor) {
+            girarTambores(visor);
+        }
         rolarAteResultado();
     }
 
@@ -257,9 +367,10 @@
         const caixa = document.createElement('div');
         caixa.className = 'resultado resultado--erro';
         caixa.setAttribute('role', 'alert');
+        caixa.dataset.gravidade = 'temporaria';
         const titulo = document.createElement('p');
         titulo.className = 'resultado__titulo';
-        titulo.textContent = 'Não foi possível consultar';
+        titulo.textContent = 'A consulta não terminou';
         const texto = document.createElement('p');
         texto.className = 'resultado__mensagem';
         texto.textContent = mensagem;
@@ -319,6 +430,7 @@
 
     function aoEscolher(indice) {
         limparDepoisDe(indice);
+        atualizarLuzes();
         if (!etapas[indice].select.value) {
             return;
         }
@@ -341,7 +453,7 @@
                 return; // a seleção mudou: a resposta antiga é descartada
             }
             marcarOcupado(etapa, false);
-            preencherOpcoes(etapa.select, 'Não foi possível carregar', []);
+            preencherOpcoes(etapa.select, 'A lista não carregou', []);
             mostrarErroNaEtapa(etapa, mensagemDe(erro), () => carregarEtapa(etapa));
         } finally {
             if (pendentes.get(etapa.nome) === controle) {
@@ -372,6 +484,7 @@
         if (!continuaValido) {
             limparDepoisDe(indice); // a opção escolhida sumiu do filtro: as etapas seguintes perdem a base
         }
+        atualizarLuzes();
     }
 
     function iniciar() {
@@ -385,6 +498,9 @@
         // O navegador pode restaurar o tipo ao voltar para a página: recomeça a cascata a partir dele.
         if (etapas[0].select.value) {
             aoEscolher(0);
+        } else {
+            limparResultado();
+            atualizarLuzes();
         }
     }
 

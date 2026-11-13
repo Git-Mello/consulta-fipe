@@ -7,59 +7,71 @@
 <header th:replace="~{fragments/layout :: cabecalho}"></header>
 
 <main class="conteudo">
-    <section class="painel" aria-labelledby="titulo-consulta">
-        <h1 id="titulo-consulta" class="painel__titulo">Escolha o veículo</h1>
+    <!-- Leitor do preço. Fica no topo, sempre no mesmo lugar, e recebe o fragmento "resultado :: card"
+         (ou "resultado :: erro") renderizado pelo servidor. O estado parado abaixo serve de modelo
+         para o JavaScript, que o copia ao limpar e ao consultar. -->
+    <section id="resultado" class="leitor" aria-live="polite" aria-label="Resultado da consulta">
+        <div class="resultado resultado--parado">
+            <header class="resultado__cabecalho">
+                <p class="resultado__rotulo">Preço médio FIPE</p>
+            </header>
+            <p class="resultado__preco" aria-hidden="true">R$ 000.000,00</p>
+            <p class="resultado__referencia">O preço aparece aqui assim que você escolher o ano.</p>
+        </div>
+    </section>
+
+    <section class="painel-consulta" aria-labelledby="titulo-consulta">
+        <h1 id="titulo-consulta" class="painel-consulta__titulo">Escolha o veículo</h1>
 
         <noscript>
-            <p class="aviso">Ative o JavaScript para consultar os preços.</p>
+            <p class="aviso">A consulta precisa de JavaScript. Ative-o no navegador e recarregue a página.</p>
         </noscript>
 
         <!-- O JavaScript lê as rotas destes atributos (respeitam o context path) -->
         <form id="consulta" class="consulta" autocomplete="off" novalidate
               th:data-api-base="@{/api}" th:data-consulta-base="@{/consulta}">
 
-            <div class="campo" id="campo-tipo">
-                <label class="campo__rotulo" for="tipo"><span class="campo__passo">1</span>Tipo de veículo</label>
+            <div class="campo" id="campo-tipo" data-estado="atual">
+                <label class="campo__rotulo" for="tipo"><span class="campo__luz">1</span>Tipo de veículo</label>
                 <select id="tipo" name="tipo" class="campo__select" aria-describedby="tipo-status">
-                    <option value="" selected>Selecione o tipo</option>
+                    <option value="" selected>Escolha o tipo</option>
                     <option th:each="tipo : ${tipos}" th:value="${tipo.slug()}" th:text="${tipo.rotulo()}">Carros</option>
                 </select>
                 <p id="tipo-status" class="campo__status" aria-live="polite"></p>
             </div>
 
-            <div class="campo" id="campo-marca">
-                <label class="campo__rotulo" for="marca"><span class="campo__passo">2</span>Marca</label>
-                <input id="marca-filtro" class="campo__filtro" type="search" placeholder="Filtrar marcas"
-                       aria-label="Filtrar marcas" aria-controls="marca" disabled>
-                <select id="marca" name="marca" class="campo__select" aria-describedby="marca-status" disabled>
-                    <option value="">Escolha o tipo primeiro</option>
-                </select>
+            <div class="campo" id="campo-marca" data-estado="bloqueada">
+                <label class="campo__rotulo" for="marca"><span class="campo__luz">2</span>Marca</label>
+                <div class="campo__controle">
+                    <input id="marca-filtro" class="campo__filtro" type="search" placeholder="Buscar marca"
+                           aria-label="Buscar marca" aria-controls="marca" disabled>
+                    <select id="marca" name="marca" class="campo__select" aria-describedby="marca-status" disabled>
+                        <option value="">Primeiro escolha o tipo</option>
+                    </select>
+                </div>
                 <p id="marca-status" class="campo__status" aria-live="polite"></p>
             </div>
 
-            <div class="campo" id="campo-modelo">
-                <label class="campo__rotulo" for="modelo"><span class="campo__passo">3</span>Modelo</label>
-                <input id="modelo-filtro" class="campo__filtro" type="search" placeholder="Filtrar modelos (ex.: argo 1.0)"
-                       aria-label="Filtrar modelos" aria-controls="modelo" disabled>
-                <select id="modelo" name="modelo" class="campo__select" aria-describedby="modelo-status" disabled>
-                    <option value="">Escolha a marca primeiro</option>
-                </select>
+            <div class="campo" id="campo-modelo" data-estado="bloqueada">
+                <label class="campo__rotulo" for="modelo"><span class="campo__luz">3</span>Modelo</label>
+                <div class="campo__controle">
+                    <input id="modelo-filtro" class="campo__filtro" type="search" placeholder="Buscar modelo, ex.: argo 1.0"
+                           aria-label="Buscar modelo" aria-controls="modelo" disabled>
+                    <select id="modelo" name="modelo" class="campo__select" aria-describedby="modelo-status" disabled>
+                        <option value="">Primeiro escolha a marca</option>
+                    </select>
+                </div>
                 <p id="modelo-status" class="campo__status" aria-live="polite"></p>
             </div>
 
-            <div class="campo" id="campo-ano">
-                <label class="campo__rotulo" for="ano"><span class="campo__passo">4</span>Ano e combustível</label>
+            <div class="campo" id="campo-ano" data-estado="bloqueada">
+                <label class="campo__rotulo" for="ano"><span class="campo__luz">4</span>Ano e combustível</label>
                 <select id="ano" name="ano" class="campo__select" aria-describedby="ano-status" disabled>
-                    <option value="">Escolha o modelo primeiro</option>
+                    <option value="">Primeiro escolha o modelo</option>
                 </select>
                 <p id="ano-status" class="campo__status" aria-live="polite"></p>
             </div>
         </form>
-    </section>
-
-    <!-- Recebe o fragmento "resultado :: card" (ou "resultado :: erro") renderizado pelo servidor -->
-    <section id="resultado" class="resultado-area" aria-live="polite" aria-label="Resultado da consulta">
-        <p class="resultado-area__dica">Escolha o tipo, a marca, o modelo e o ano para ver o preço FIPE.</p>
     </section>
 </main>
 

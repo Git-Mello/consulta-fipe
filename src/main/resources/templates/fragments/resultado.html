@@ -2,39 +2,48 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!-- Card com o preço FIPE: devolvido por GET /consulta/{tipo}/{marcaId}/{modeloId}/{anoId} -->
+<!-- Preço FIPE: devolvido por GET /consulta/{tipo}/{marcaId}/{modeloId}/{anoId}.
+     O JavaScript transforma o texto de .resultado__preco nos tambores do leitor; sem JS, fica o texto. -->
 <article th:fragment="card" class="resultado" aria-labelledby="resultado-titulo">
     <header class="resultado__cabecalho">
-        <p id="resultado-titulo" class="resultado__rotulo">Preço FIPE</p>
-        <p class="resultado__tipo" th:text="${preco.tipo().rotulo()}">Carros</p>
+        <p id="resultado-titulo" class="resultado__rotulo">Preço médio FIPE</p>
     </header>
     <p class="resultado__preco" th:text="${preco.valor()}">R$ 0,00</p>
+    <p class="resultado__referencia">
+        Média de mercado em <span th:text="${preco.mesReferencia()}">mês de ano</span>,
+        não o valor de um veículo específico.
+    </p>
     <dl class="resultado__detalhes">
+        <div>
+            <dt>Tipo</dt>
+            <dd class="resultado__tipo" th:text="${preco.tipo().rotulo()}">Carros</dd>
+        </div>
         <div>
             <dt>Marca</dt>
             <dd th:text="${preco.marca()}">Marca</dd>
         </div>
-        <div>
+        <div class="resultado__modelo">
             <dt>Modelo</dt>
             <dd th:text="${preco.modelo()}">Modelo</dd>
         </div>
         <div>
-            <dt>Ano / combustível</dt>
-            <dd th:text="|${preco.anoDescricao()} · ${preco.combustivel()}|">2018 · Flex</dd>
+            <dt>Ano-modelo</dt>
+            <dd th:text="${preco.anoDescricao()}">2018</dd>
+        </div>
+        <div>
+            <dt>Combustível</dt>
+            <dd th:text="${preco.combustivel()}">Flex</dd>
         </div>
         <div>
             <dt>Código FIPE</dt>
-            <dd class="resultado__codigo" th:text="${preco.codigoFipe()}">000000-0</dd>
-        </div>
-        <div>
-            <dt>Mês de referência</dt>
-            <dd th:text="${preco.mesReferencia()}">mês de ano</dd>
+            <dd th:text="${preco.codigoFipe()}">000000-0</dd>
         </div>
     </dl>
 </article>
 
-<!-- Erro da consulta: inserido pelo JavaScript no lugar do card -->
-<div th:fragment="erro" class="resultado resultado--erro" role="alert">
+<!-- Erro da consulta: inserido pelo JavaScript no lugar do card.
+     503 (FIPE fora do ar ou cota diária esgotada) é temporário: acende a luz âmbar; o resto, a vermelha. -->
+<div th:fragment="erro" class="resultado resultado--erro" role="alert" th:data-gravidade="${status == 503 ? 'temporaria' : 'falha'}">
     <p class="resultado__titulo" th:text="${titulo}">Erro</p>
     <p class="resultado__mensagem" th:text="${mensagem}">Não foi possível concluir a consulta.</p>
 </div>
